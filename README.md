@@ -1,8 +1,8 @@
-# Anvaya CRM
+# Flow CRM
 
 ---
 
-A MERN Stack Anvaya CRM system to manage leads, assign sales agents, track lead status, and analyze performance through dashboards and reports. <br>
+A MERN Stack Flow CRM system to manage leads, assign sales agents, track lead status, and analyze performance through dashboards and reports. <br>
 Build with a React frontend, Express/Node backend, MongoDB database.
 
 ---
@@ -16,7 +16,7 @@ Build with a React frontend, Express/Node backend, MongoDB database.
 ## Quick Start
 
 ```
-git clone https://github.com/Sourabhpande532/ANVAYA_FLOW.git
+git clone https://github.com/Sourabhpande532/FlowCRM
 cd ANVAYA_FLOW
 npm install
 npm run dev  # or `npm Start` / `yarn dev`
@@ -81,7 +81,7 @@ Watch a walkthrough (5-7 minutes) of all major features of this app: <br>
 
 ## Reference
 
-![](./assets/Dashboard.png)
+![](./assets/anvaya.png)
 ---
 ![](./assets/Chart.png)
 

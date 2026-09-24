@@ -11,7 +11,7 @@ import {
   FiX,
   FiZap,
 } from "react-icons/fi";
-import "../component/style.css";
+import "../../src/style.css";
 
 const Sidebar = () => {
   const [open, setOpen] = useState(false);
@@ -55,7 +55,7 @@ const Sidebar = () => {
               <FiZap size={18} />
             </div>
             <div>
-              <div className="sidebar-brand-name">Anvaya Flow</div>
+              <div className="sidebar-brand-name">Flow CRM</div>
               <div className="sidebar-brand-tag">Sales CRM</div>
             </div>
           </NavLink>

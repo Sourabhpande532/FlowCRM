@@ -2,7 +2,7 @@ import React, { useEffect, useState, useContext } from "react";
 import { useLocation, useNavigate, Link } from "react-router-dom";
 import { fetchJSON } from "../api";
 import { LeadContext } from "../context/LeadContext";
-import { LeadCard } from "../component/LeadsCard/LeadCard";
+import { LeadCard } from "../component/LeadCard";
 import {
   FiFilter,
   FiPlus,
