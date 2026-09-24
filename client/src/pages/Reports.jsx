@@ -11,7 +11,7 @@ import {
   Tooltip,
   Legend,
 } from "chart.js";
-import { FaChartPie, FaUserCheck, FaFire } from "react-icons/fa";
+import { FiPieChart, FiCheckCircle, FiTrendingUp, FiActivity, FiUsers } from "react-icons/fi";
 
 Chart.register(
   BarController,
@@ -27,27 +27,42 @@ Chart.register(
 const Reports = () => {
   const [pipeline, setPipeline] = useState(null);
   const [closedLastWeek, setClosedLastWeek] = useState([]);
+  const [loading, setLoading] = useState(true);
 
   const statusBarRef = useRef(null);
   const pipelinePieRef = useRef(null);
   const agentBarRef = useRef(null);
 
   useEffect(() => {
+    let cancelled = false;
     (async () => {
       try {
         const pipelineRes = await fetchJSON("/report/pipeline");
         const closedRes = await fetchJSON("/report/last-week");
 
-        setPipeline(pipelineRes);
-        setClosedLastWeek(closedRes || []);
+        if (!cancelled) {
+          setPipeline(pipelineRes);
+          setClosedLastWeek(closedRes || []);
+        }
       } catch (e) {
-        console.error(e);
+        console.error("Failed to load reports data", e);
+      } finally {
+        if (!cancelled) setLoading(false);
       }
     })();
+
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   useEffect(() => {
-    if (!pipeline) return;
+    if (!pipeline || !statusBarRef.current || !pipelinePieRef.current || !agentBarRef.current) return;
+
+    // Chart styling defaults
+    const gridColor = "rgba(255, 255, 255, 0.06)";
+    const tickColor = "#94a3b8";
+    const fontFamily = "'Plus Jakarta Sans', system-ui, sans-serif";
 
     const statusChart = new Chart(statusBarRef.current, {
       type: "bar",
@@ -55,28 +70,82 @@ const Reports = () => {
         labels: Object.keys(pipeline.byStatus || {}),
         datasets: [
           {
-            label: "Leads",
+            label: "Active Leads",
             data: Object.values(pipeline.byStatus || {}),
-            backgroundColor: "#0d6efd",
+            backgroundColor: "#6366f1",
+            borderRadius: 6,
+            hoverBackgroundColor: "#4f46e5",
           },
         ],
       },
-      options: { responsive: true, plugins: { legend: { display: false } } },
+      options: {
+        responsive: true,
+        plugins: {
+          legend: { display: false },
+          tooltip: {
+            backgroundColor: "#111726",
+            titleColor: "#f8fafc",
+            bodyColor: "#94a3b8",
+            borderColor: "#283548",
+            borderWidth: 1,
+            padding: 10,
+            cornerRadius: 8,
+          },
+        },
+        scales: {
+          x: {
+            grid: { color: gridColor },
+            ticks: { color: tickColor, font: { family: fontFamily } },
+          },
+          y: {
+            beginAtZero: true,
+            grid: { color: gridColor },
+            ticks: { color: tickColor, font: { family: fontFamily }, stepSize: 1 },
+          },
+        },
+      },
     });
 
     const pipelineChart = new Chart(pipelinePieRef.current, {
       type: "pie",
       data: {
-        labels: ["Closed Last Week", "In Pipeline"],
+        labels: ["Closed Last Week", "Active Pipeline"],
         datasets: [
           {
             data: [
               closedLastWeek.length,
-              pipeline.totalLeadsInPipeline - closedLastWeek.length,
+              pipeline.totalLeadsInPipeline || 0,
             ],
-            backgroundColor: ["#198754", "#ffc107"],
+            backgroundColor: ["#10b981", "#6366f1"],
+            borderColor: "#111726",
+            borderWidth: 3,
+            hoverOffset: 6,
           },
         ],
+      },
+      options: {
+        responsive: true,
+        plugins: {
+          legend: {
+            position: "bottom",
+            labels: {
+              color: "#94a3b8",
+              font: { family: fontFamily, size: 12 },
+              padding: 16,
+              boxWidth: 12,
+              boxHeight: 12,
+            },
+          },
+          tooltip: {
+            backgroundColor: "#111726",
+            titleColor: "#f8fafc",
+            bodyColor: "#94a3b8",
+            borderColor: "#283548",
+            borderWidth: 1,
+            padding: 10,
+            cornerRadius: 8,
+          },
+        },
       },
     });
 
@@ -86,19 +155,49 @@ const Reports = () => {
       agentMap[a] = (agentMap[a] || 0) + 1;
     });
 
+    const agentLabels = Object.keys(agentMap);
+    const agentData = Object.values(agentMap);
+
     const agentChart = new Chart(agentBarRef.current, {
       type: "bar",
       data: {
-        labels: Object.keys(agentMap),
+        labels: agentLabels.length > 0 ? agentLabels : ["No Closed Leads Yet"],
         datasets: [
           {
             label: "Closed Leads",
-            data: Object.values(agentMap),
-            backgroundColor: "#6610f2",
+            data: agentData.length > 0 ? agentData : [0],
+            backgroundColor: "#0ea5e9",
+            borderRadius: 6,
+            hoverBackgroundColor: "#0284c7",
           },
         ],
       },
-      options: { responsive: true, plugins: { legend: { display: false } } },
+      options: {
+        responsive: true,
+        plugins: {
+          legend: { display: false },
+          tooltip: {
+            backgroundColor: "#111726",
+            titleColor: "#f8fafc",
+            bodyColor: "#94a3b8",
+            borderColor: "#283548",
+            borderWidth: 1,
+            padding: 10,
+            cornerRadius: 8,
+          },
+        },
+        scales: {
+          x: {
+            grid: { color: gridColor },
+            ticks: { color: tickColor, font: { family: fontFamily } },
+          },
+          y: {
+            beginAtZero: true,
+            grid: { color: gridColor },
+            ticks: { color: tickColor, font: { family: fontFamily }, stepSize: 1 },
+          },
+        },
+      },
     });
 
     return () => {
@@ -109,81 +208,118 @@ const Reports = () => {
   }, [pipeline, closedLastWeek]);
 
   return (
-    <div className="container-fluid px-2 px-md-4">
-      <h4 className="fw-bold mb-4 text-center text-md-start">
-        Anvaya CRM Reports
-      </h4>
+    <div className="container-fluid px-0">
+      {/* Page Header */}
+      <div className="page-header">
+        <h1 className="page-title">Executive Sales Intelligence</h1>
+        <p className="page-subtitle">
+          Conversion velocities, stage distributions, and agent performance analytics
+        </p>
+      </div>
 
-      {/* KPI CARDS */}
-      <div className="row g-3 mb-4">
-        <div className="col-12 col-md-4">
-          <div className="card shadow-sm h-100">
-            <div className="card-body d-flex gap-3 align-items-center">
-              <FaChartPie className="text-primary" size={26} />
-              <div>
-                <div className="small text-muted">Leads in Pipeline</div>
-                <div className="fs-4 fw-bold">
-                  {pipeline?.totalLeadsInPipeline ?? "-"}
+      {loading ? (
+        <div className="text-center py-5">
+          <div className="spinner-border spinner-border-sm text-primary me-2" role="status" />
+          <span className="text-muted small">Synthesizing intelligence metrics...</span>
+        </div>
+      ) : (
+        <>
+          {/* KPI CARDS */}
+          <div className="row g-3 mb-4">
+            <div className="col-12 col-md-4">
+              <div className="metric-card h-100" style={{ "--metric-accent": "var(--brand-primary)" }}>
+                <div className="d-flex align-items-center justify-content-between mb-2">
+                  <span className="text-muted small">Active in Pipeline</span>
+                  <div className="p-2 rounded" style={{ backgroundColor: "var(--brand-primary-subtle)", color: "#a5b4fc" }}>
+                    <FiPieChart size={18} />
+                  </div>
+                </div>
+                <div className="fs-3 fw-bold text-white mb-0">
+                  {pipeline?.totalLeadsInPipeline ?? 0}
+                </div>
+                <div className="text-muted small mt-1">
+                  Active opportunities progressing
+                </div>
+              </div>
+            </div>
+
+            <div className="col-12 col-md-4">
+              <div className="metric-card h-100" style={{ "--metric-accent": "var(--accent-emerald)" }}>
+                <div className="d-flex align-items-center justify-content-between mb-2">
+                  <span className="text-muted small">Closed in Last 7 Days</span>
+                  <div className="p-2 rounded" style={{ backgroundColor: "var(--accent-emerald-subtle)", color: "#34d399" }}>
+                    <FiCheckCircle size={18} />
+                  </div>
+                </div>
+                <div className="fs-3 fw-bold text-white mb-0">
+                  {closedLastWeek.length}
+                </div>
+                <div className="text-muted small mt-1">
+                  Deals successfully won this week
+                </div>
+              </div>
+            </div>
+
+            <div className="col-12 col-md-4">
+              <div className="metric-card h-100" style={{ "--metric-accent": "var(--accent-amber)" }}>
+                <div className="d-flex align-items-center justify-content-between mb-2">
+                  <span className="text-muted small">Pipeline Health</span>
+                  <div className="p-2 rounded" style={{ backgroundColor: "var(--accent-amber-subtle)", color: "#fbbf24" }}>
+                    <FiTrendingUp size={18} />
+                  </div>
+                </div>
+                <div className="fs-3 fw-bold text-white mb-0">
+                  {pipeline?.totalLeadsInPipeline ? "Healthy" : "Idle"}
+                </div>
+                <div className="text-muted small mt-1">
+                  Velocity tracking across 5 stages
                 </div>
               </div>
             </div>
           </div>
-        </div>
 
-        <div className="col-12 col-md-4">
-          <div className="card shadow-sm h-100">
-            <div className="card-body d-flex gap-3 align-items-center">
-              <FaUserCheck className="text-success" size={26} />
-              <div>
-                <div className="small text-muted">Closed Last Week</div>
-                <div className="fs-4 fw-bold">{closedLastWeek.length}</div>
+          {/* CHARTS */}
+          <div className="row g-4">
+            <div className="col-12 col-lg-7">
+              <div className="card shadow-sm h-100">
+                <div className="card-body">
+                  <div className="d-flex align-items-center gap-2 mb-3">
+                    <FiActivity className="text-primary" size={18} />
+                    <h2 className="fs-6 fw-bold mb-0">Lead Distribution by Pipeline Stage</h2>
+                  </div>
+                  <canvas ref={statusBarRef} height={140} />
+                </div>
+              </div>
+            </div>
+
+            <div className="col-12 col-lg-5">
+              <div className="card shadow-sm h-100">
+                <div className="card-body">
+                  <div className="d-flex align-items-center gap-2 mb-3">
+                    <FiPieChart className="text-success" size={18} />
+                    <h2 className="fs-6 fw-bold mb-0">Closed Ratio vs Active Pipeline</h2>
+                  </div>
+                  <div style={{ maxWidth: 280, margin: "0 auto" }}>
+                    <canvas ref={pipelinePieRef} />
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="col-12">
+              <div className="card shadow-sm">
+                <div className="card-body">
+                  <div className="d-flex align-items-center gap-2 mb-3">
+                    <FiUsers className="text-info" size={18} />
+                    <h2 className="fs-6 fw-bold mb-0">Closed Deals Breakdown by Sales Agent (Last 7 Days)</h2>
+                  </div>
+                  <canvas ref={agentBarRef} height={80} />
+                </div>
               </div>
             </div>
           </div>
-        </div>
-
-        <div className="col-12 col-md-4">
-          <div className="card shadow-sm h-100">
-            <div className="card-body d-flex gap-3 align-items-center">
-              <FaFire className="text-danger" size={26} />
-              <div>
-                <div className="small text-muted">Performance</div>
-                <div className="fw-semibold">Sales Activity</div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* CHARTS */}
-      <div className="row g-4">
-        <div className="col-12 col-lg-6">
-          <div className="card shadow-sm h-100">
-            <div className="card-body">
-              <h6 className="fw-semibold">Lead Status Distribution</h6>
-              <canvas ref={statusBarRef} />
-            </div>
-          </div>
-        </div>
-
-        <div className="col-12 col-lg-6">
-          <div className="card shadow-sm h-100">
-            <div className="card-body">
-              <h6 className="fw-semibold">Closed vs Pipeline</h6>
-              <canvas ref={pipelinePieRef} />
-            </div>
-          </div>
-        </div>
-
-        <div className="col-12">
-          <div className="card shadow-sm">
-            <div className="card-body">
-              <h6 className="fw-semibold">Leads Closed by Sales Agent</h6>
-              <canvas ref={agentBarRef} />
-            </div>
-          </div>
-        </div>
-      </div>
+        </>
+      )}
     </div>
   );
 };

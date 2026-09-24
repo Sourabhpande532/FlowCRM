@@ -1,6 +1,7 @@
 {
-  "short_name": "React App",
-  "name": "Create React App Sample",
+  "short_name": "Anvaya Flow",
+  "name": "Anvaya Flow CRM — Lead & Sales Management",
+  "description": "Streamline lead tracking, agent assignments, and sales analytics with Anvaya Flow.",
   "icons": [
     {
       "src": "favicon.ico",
@@ -20,6 +21,6 @@
   ],
   "start_url": ".",
   "display": "standalone",
-  "theme_color": "#000000",
-  "background_color": "#ffffff"
+  "theme_color": "#090d16",
+  "background_color": "#090d16"
 }

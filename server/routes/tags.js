@@ -3,18 +3,18 @@ const app = express.Router();
 const Tags = require("../model/Tags");
 
 app.post("/", async (req, res) => {
-  const { name } = req.body;
-  if (!name) return res.status(400).json({ error: "Tag name is required" });
-  const exists = await Tags.findOne({ name });
-  if (exists)
-    return res.status(409).json({ error: `Tag '${name}' already exits ` });
-  const tag = new Tags({ name });
-  await tag.save();
-  res.status(201).json({ success: true, data: { tag } });
   try {
+    const { name } = req.body;
+    if (!name) return res.status(400).json({ error: "Tag name is required" });
+    const exists = await Tags.findOne({ name });
+    if (exists)
+      return res.status(409).json({ error: `Tag '${name}' already exits ` });
+    const tag = new Tags({ name });
+    await tag.save();
+    res.status(201).json({ success: true, data: { tag } });
   } catch (error) {
     console.error(error.message);
-    res.status(500).json({ success: false, message: "Server error" });
+    res.status(500).json({ success: false, message: "Server error", error: error.message });
   }
 });
 

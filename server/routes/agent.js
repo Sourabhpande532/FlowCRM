@@ -68,6 +68,7 @@ app.get("/", async (req, res) => {
     }
   } catch (error) {
     console.error("Failed To fetched data!", error.message);
+    res.status(500).json({ success: false, message: "Failed to fetch agents", error: error.message });
   }
 });
 
@@ -77,6 +78,7 @@ app.delete("/:id", async (req, res) => {
     res.status(200).json({ message: "Deleted" });
   } catch (error) {
     console.error(error.message);
+    res.status(500).json({ success: false, message: "Failed to delete agent", error: error.message });
   }
 });
 

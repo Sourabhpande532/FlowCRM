@@ -1,12 +1,19 @@
-/* eslint-disable no-lone-blocks */
 import React, { useEffect, useState, useContext } from "react";
-import { useLocation, useNavigate } from "react-router-dom";
+import { useLocation, useNavigate, Link } from "react-router-dom";
 import { fetchJSON } from "../api";
 import { LeadContext } from "../context/LeadContext";
 import { LeadCard } from "../component/LeadsCard/LeadCard";
+import {
+  FiFilter,
+  FiPlus,
+  FiRotateCcw,
+  FiUsers,
+  FiTag,
+  FiCheck,
+} from "react-icons/fi";
 
 function LeadList() {
-  const { agents = [], tags = [] } = useContext(LeadContext);
+  const { agents = [], tags = [], showToast } = useContext(LeadContext);
   const location = useLocation();
   const navigate = useNavigate();
 
@@ -46,13 +53,16 @@ function LeadList() {
     navigate(`/leads?${sp.toString()}`);
   };
 
+  const resetFilters = () => {
+    navigate("/leads");
+  };
+
   // Fetch leads whenever URL search changes
   useEffect(() => {
     let cancelled = false;
     const fetchLeads = async () => {
       setLoading(true);
       try {
-        // reuse the raw search string so server receives same query format
         const path = "/leads" + (location.search ? location.search : "");
         const data = await fetchJSON(path);
         if (!cancelled) {
@@ -72,7 +82,6 @@ function LeadList() {
     };
   }, [location.search]);
 
-  // Quick helper to update a single field in filters
   const updateFilterField = (field, value) => {
     setFilters((prev) => ({ ...prev, [field]: value }));
   };
@@ -80,126 +89,220 @@ function LeadList() {
   const deleteLead = async (id) => {
     try {
       await fetchJSON(`/leads/${id}`, { method: "DELETE" });
-      // instant UI update (no refresh)
       setLeads((prev) => prev.filter((lead) => lead._id !== id));
+      if (showToast) showToast("Lead removed from pipeline", "success");
     } catch (error) {
-      alert("Failed to delete lead");
+      if (showToast) showToast("Failed to delete lead", "danger");
     }
   };
+
+  const hasActiveFilters = Boolean(
+    filters.salesAgent ||
+    filters.status ||
+    filters.source ||
+    filters.tags ||
+    filters.sortBy
+  );
+
   return (
-    <div>
-      <h2 className="fw-bold mb-4 text-center text-md-start">Leads</h2>
-      {/* Filters card */}
-      <div className='card mb-3 p-3'>
-        <div className='row g-2 align-items-end'>
-          {/* Sales Agent */}
-          <div className='col-md-3'>
-            <label className='form-label small'>Sales Agent</label>
-            <select
-              className='form-select'
-              value={filters.salesAgent}
-              onChange={(e) => updateFilterField("salesAgent", e.target.value)}>
-              <option value=''>All</option>
-              {agents.map((a) => (
-                <option key={a._id} value={a._id}>
-                  {a.name}
-                </option>
-              ))}
-            </select>
+    <div className="container-fluid px-0">
+      {/* Page Header */}
+      <div className="page-header d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center gap-3">
+        <div>
+          <h1 className="page-title">Lead Management</h1>
+          <p className="page-subtitle">
+            Filter, prioritize, and track customer conversions across stages
+          </p>
+        </div>
+        <Link to="/add-lead" className="btn btn-primary shadow-sm">
+          <FiPlus size={16} />
+          <span>New Lead</span>
+        </Link>
+      </div>
+
+      {/* FILTERS CONTROL PANEL */}
+      <div className="card mb-4 shadow-sm">
+        <div className="card-body p-3 p-md-4">
+          <div className="d-flex align-items-center justify-content-between mb-3">
+            <div className="d-flex align-items-center gap-2">
+              <FiFilter className="text-primary" size={17} />
+              <h2 className="fs-6 fw-bold mb-0">Pipeline Filters & Sort</h2>
+            </div>
+            {hasActiveFilters && (
+              <button
+                type="button"
+                className="btn-icon-subtle small d-flex align-items-center gap-1 text-muted"
+                onClick={resetFilters}
+              >
+                <FiRotateCcw size={13} />
+                <span>Reset Filters</span>
+              </button>
+            )}
           </div>
 
-          {/* Status */}
-          <div className='col-md-2'>
-            <label className='form-label small'>Status</label>
-            <select
-              className='form-select'
-              value={filters.status}
-              onChange={(e) => updateFilterField("status", e.target.value)}>
-              <option value=''>All</option>
-              <option>New</option>
-              <option>Contacted</option>
-              <option>Qualified</option>
-              <option>Proposal Sent</option>
-              <option>Closed</option>
-            </select>
-          </div>
+          <div className="row g-3 align-items-end">
+            {/* Sales Agent */}
+            <div className="col-12 col-sm-6 col-md-3">
+              <label htmlFor="filter-agent" className="form-label">
+                Sales Agent
+              </label>
+              <select
+                id="filter-agent"
+                className="form-select"
+                value={filters.salesAgent}
+                onChange={(e) => updateFilterField("salesAgent", e.target.value)}
+              >
+                <option value="">All Agents</option>
+                {agents.map((a) => (
+                  <option key={a._id} value={a._id}>
+                    {a.name}
+                  </option>
+                ))}
+              </select>
+            </div>
 
-          {/* Source */}
-          <div className='col-md-2'>
-            <label className='form-label small'>Source</label>
-            <select
-              className='form-select'
-              value={filters.source}
-              onChange={(e) => updateFilterField("source", e.target.value)}>
-              <option value=''>All</option>
-              <option>Website</option>
-              <option>Referral</option>
-              <option>Cold Call</option>
-              <option>Advertisement</option>
-              <option>Email</option>
-              <option>Other</option>
-            </select>
-          </div>
+            {/* Status */}
+            <div className="col-12 col-sm-6 col-md-2">
+              <label htmlFor="filter-status" className="form-label">
+                Status
+              </label>
+              <select
+                id="filter-status"
+                className="form-select"
+                value={filters.status}
+                onChange={(e) => updateFilterField("status", e.target.value)}
+              >
+                <option value="">All Statuses</option>
+                <option>New</option>
+                <option>Contacted</option>
+                <option>Qualified</option>
+                <option>Proposal Sent</option>
+                <option>Closed</option>
+              </select>
+            </div>
 
-          {/* Tags */}
-          <div className='col-md-2'>
-            <label className='form-label small'>Tags</label>
-            <select
-              className='form-select'
-              value={filters.tags}
-              onChange={(e) => updateFilterField("tags", e.target.value)}>
-              <option value=''>All</option>
-              {tags.map((t) => (
-                <option key={t._id} value={t.name}>
-                  {t.name}
-                </option>
-              ))}
-            </select>
-          </div>
+            {/* Source */}
+            <div className="col-12 col-sm-6 col-md-2">
+              <label htmlFor="filter-source" className="form-label">
+                Source
+              </label>
+              <select
+                id="filter-source"
+                className="form-select"
+                value={filters.source}
+                onChange={(e) => updateFilterField("source", e.target.value)}
+              >
+                <option value="">All Sources</option>
+                <option>Website</option>
+                <option>Referral</option>
+                <option>Cold Call</option>
+                <option>Advertisement</option>
+                <option>Email</option>
+                <option>Other</option>
+              </select>
+            </div>
 
-          {/* Sort */}
-          <div className='col-md-1'>
-            <label className='form-label small'>Sort</label>
-            <select
-              className='form-select'
-              value={filters.sortBy}
-              onChange={(e) => updateFilterField("sortBy", e.target.value)}>
-              <option value=''>Default</option>
-              <option value='priority'>Priority</option>
-              <option value='timeToClose'>Time to Close</option>
-              <option value='createdAt'>Created At</option>
-            </select>
-          </div>
+            {/* Tags */}
+            <div className="col-12 col-sm-6 col-md-2">
+              <label htmlFor="filter-tags" className="form-label">
+                Tags
+              </label>
+              <select
+                id="filter-tags"
+                className="form-select"
+                value={filters.tags}
+                onChange={(e) => updateFilterField("tags", e.target.value)}
+              >
+                <option value="">All Tags</option>
+                {tags.map((t) => (
+                  <option key={t._id} value={t.name}>
+                    {t.name}
+                  </option>
+                ))}
+              </select>
+            </div>
 
-          {/* Sort Dir */}
-          <div className='col-md-1'>
-            <label className='form-label small'>Dir</label>
-            <select
-              className='form-select'
-              value={filters.sortDir}
-              onChange={(e) => updateFilterField("sortDir", e.target.value)}>
-              <option value='asc'>Asc</option>
-              <option value='desc'>Desc</option>
-            </select>
-          </div>
+            {/* Sort & Dir */}
+            <div className="col-6 col-md-1">
+              <label htmlFor="filter-sort" className="form-label">
+                Sort
+              </label>
+              <select
+                id="filter-sort"
+                className="form-select px-2"
+                value={filters.sortBy}
+                onChange={(e) => updateFilterField("sortBy", e.target.value)}
+              >
+                <option value="">Default</option>
+                <option value="priority">Priority</option>
+                <option value="timeToClose">Close Time</option>
+                <option value="createdAt">Created</option>
+              </select>
+            </div>
 
-          {/* Apply button */}
-          <div className='col-md-1 text-end'>
-            <button className='btn btn-primary' onClick={applyFilters}>
-              Apply
-            </button>
+            <div className="col-6 col-md-1">
+              <label htmlFor="filter-dir" className="form-label">
+                Order
+              </label>
+              <select
+                id="filter-dir"
+                className="form-select px-2"
+                value={filters.sortDir}
+                onChange={(e) => updateFilterField("sortDir", e.target.value)}
+              >
+                <option value="asc">Asc</option>
+                <option value="desc">Desc</option>
+              </select>
+            </div>
+
+            {/* Apply Button */}
+            <div className="col-12 col-md-1">
+              <button
+                type="button"
+                className="btn btn-primary w-100"
+                onClick={applyFilters}
+              >
+                <FiCheck size={16} />
+                <span className="d-md-none">Apply</span>
+              </button>
+            </div>
           </div>
         </div>
       </div>
 
-      {/* Loading / Leads list */}
+      {/* MAIN VIEW: LEADS + QUICK FILTERS SIDEBAR */}
       {loading ? (
-        <p>Loading...</p>
+        <div className="text-center py-5">
+          <div className="spinner-border spinner-border-sm text-primary me-2" role="status" />
+          <span className="text-muted small">Loading matching leads...</span>
+        </div>
       ) : (
-        <div className='row'>
-          <div className='col-md-8'>
+        <div className="row g-4">
+          {/* LEADS LIST */}
+          <div className="col-12 col-lg-8">
+            <div className="d-flex justify-content-between align-items-center mb-3">
+              <h2 className="fs-6 fw-bold mb-0 text-secondary">
+                Showing {leads.length} {leads.length === 1 ? "lead" : "leads"}
+              </h2>
+            </div>
+
             {leads.length === 0 ? (
-              <p>No leads found</p>
+              <div className="card p-5 text-center">
+                <FiUsers size={32} className="text-muted mx-auto mb-3" />
+                <h3 className="fs-6 fw-bold text-white mb-1">No Leads Found</h3>
+                <p className="text-muted small mb-3">
+                  No records match your selected criteria. Try adjusting or clearing your filters.
+                </p>
+                {hasActiveFilters && (
+                  <button
+                    type="button"
+                    className="btn btn-sm btn-outline-secondary mx-auto"
+                    onClick={resetFilters}
+                  >
+                    Clear All Filters
+                  </button>
+                )}
+              </div>
             ) : (
               leads.map((lead) => (
                 <LeadCard key={lead._id} lead={lead} onDelete={deleteLead} />
@@ -207,45 +310,70 @@ function LeadList() {
             )}
           </div>
 
-          {/* Quick Filters or sidebar */}
-          <div className='col-md-4'>
-            <div className='card p-2'>
-              <h6>Quick Filters</h6>
-              <div className='d-flex flex-wrap'>
-                <button
-                  className='btn btn-sm btn-outline-primary me-1 mb-1'
-                  onClick={() => navigate("/leads?status=New")}>
-                  New
-                </button>
-                <button
-                  className='btn btn-sm btn-outline-secondary me-1 mb-1'
-                  onClick={() => navigate("/leads?status=Contacted")}>
-                  Contacted
-                </button>
-                <button
-                  className='btn btn-sm btn-outline-success me-1 mb-1'
-                  onClick={() => navigate("/leads?status=Closed")}>
-                  Closed
-                </button>
-              </div>
+          {/* QUICK SIDEBAR */}
+          <div className="col-12 col-lg-4">
+            <div className="card shadow-sm sticky-top" style={{ top: "1.5rem" }}>
+              <div className="card-body">
+                <h2 className="fs-6 fw-bold mb-3 d-flex align-items-center gap-2">
+                  <FiFilter className="text-primary" size={16} />
+                  <span>Preset Filters</span>
+                </h2>
 
-              {/* show known tags for quick set */}
-              {tags && tags.length > 0 && (
-                <>
-                  <hr />
-                  <h6 className='mb-2'>Tags</h6>
-                  <div>
-                    {tags.map((t) => (
-                      <button
-                        key={t._id}
-                        className='btn btn-sm btn-outline-info me-1 mb-1'
-                        onClick={() => navigate(`/leads?tags=${t.name}`)}>
-                        {t.name}
-                      </button>
-                    ))}
-                  </div>
-                </>
-              )}
+                <div className="d-flex flex-wrap gap-2 mb-3">
+                  <button
+                    type="button"
+                    className="btn btn-sm btn-outline-primary"
+                    onClick={() => navigate("/leads?status=New")}
+                  >
+                    New
+                  </button>
+                  <button
+                    type="button"
+                    className="btn btn-sm btn-outline-secondary"
+                    onClick={() => navigate("/leads?status=Contacted")}
+                  >
+                    Contacted
+                  </button>
+                  <button
+                    type="button"
+                    className="btn btn-sm btn-outline-secondary"
+                    onClick={() => navigate("/leads?status=Qualified")}
+                  >
+                    Qualified
+                  </button>
+                  <button
+                    type="button"
+                    className="btn btn-sm btn-outline-secondary"
+                    onClick={() => navigate("/leads?status=Closed")}
+                  >
+                    Closed
+                  </button>
+                </div>
+
+                {/* TAGS */}
+                {tags && tags.length > 0 && (
+                  <>
+                    <hr />
+                    <h2 className="fs-6 fw-bold mb-2 d-flex align-items-center gap-2">
+                      <FiTag className="text-primary" size={15} />
+                      <span>Filter by Tag</span>
+                    </h2>
+                    <div className="d-flex flex-wrap gap-1">
+                      {tags.map((t) => (
+                        <button
+                          key={t._id}
+                          type="button"
+                          className="btn-icon-subtle tag-badge"
+                          style={{ cursor: "pointer" }}
+                          onClick={() => navigate(`/leads?tags=${encodeURIComponent(t.name)}`)}
+                        >
+                          {t.name}
+                        </button>
+                      ))}
+                    </div>
+                  </>
+                )}
+              </div>
             </div>
           </div>
         </div>
@@ -255,15 +383,3 @@ function LeadList() {
 }
 
 export { LeadList };
-
-{
-  /**
-   *
-   * Features:
-   * - Read filters from URL on mount and when URL changes
-   * - Update URL when user applies filters
-   * - Fetch leads whenever the URL search changes
-   * - Uses agents from LeadContext
-   * - Loading state and simple error logging
-   */
-}

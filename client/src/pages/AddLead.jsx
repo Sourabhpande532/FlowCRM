@@ -1,11 +1,21 @@
 import { useContext, useState } from "react";
 import { LeadContext } from "../context/LeadContext";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 import { fetchJSON } from "../api";
+import {
+  FiArrowLeft,
+  FiPlus,
+  FiX,
+  FiUser,
+  FiBriefcase,
+  FiClock,
+  FiTag,
+  FiCheckCircle,
+} from "react-icons/fi";
 import "../App.css";
 
 const AddLeads = () => {
-  const { agents, showToast } = useContext(LeadContext);
+  const { agents = [], showToast } = useContext(LeadContext);
   const [form, setForm] = useState({
     name: "",
     source: "Website",
@@ -17,10 +27,11 @@ const AddLeads = () => {
   });
 
   const [tagInput, setTagInput] = useState("");
+  const [submitting, setSubmitting] = useState(false);
   const navigate = useNavigate();
 
   const addTag = () => {
-    if (!tagInput) return;
+    if (!tagInput.trim()) return;
     setForm((prev) => ({
       ...prev,
       tags: Array.from(new Set([...prev.tags, tagInput.trim()])),
@@ -28,85 +39,129 @@ const AddLeads = () => {
     setTagInput("");
   };
 
+  const handleTagKeyDown = (e) => {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      addTag();
+    }
+  };
+
   const removeTag = (tag) =>
     setForm((prev) => ({
       ...prev,
       tags: prev.tags.filter((x) => x !== tag),
     }));
+
   const handle = (e) => setForm({ ...form, [e.target.name]: e.target.value });
 
   const submit = async (ev) => {
     ev.preventDefault();
+    setSubmitting(true);
     try {
       await fetchJSON("/leads", {
         method: "POST",
         body: JSON.stringify(form),
       });
 
-      showToast("Lead created successfully ✅", "success"); // ✅ toaster
+      if (showToast) showToast("Lead created and assigned successfully", "success");
       navigate("/leads");
     } catch (e) {
-      showToast("Failed to create lead ❌", "danger"); // ✅ toaster
+      if (showToast) showToast("Failed to create lead. Please verify all inputs.", "danger");
       console.error(e);
+    } finally {
+      setSubmitting(false);
     }
   };
 
   return (
-    <div className='container-fluid px-4'>
-      {/* Page title */}
-      <div className='mb-3'>
-        <h4 className='fw-bold mb-4 text-center text-md-start'>Add Lead</h4>
-        <p className='text-muted small mb-0'>
-          Create and assign a new lead to a sales agent
+    <div className="container-fluid px-0">
+      {/* Back button */}
+      <div className="mb-3">
+        <Link
+          to="/leads"
+          className="btn-icon-subtle text-decoration-none d-inline-flex align-items-center gap-1 small text-muted"
+        >
+          <FiArrowLeft size={14} />
+          <span>Back to Leads</span>
+        </Link>
+      </div>
+
+      {/* Page Header */}
+      <div className="page-header">
+        <h1 className="page-title">Create New Lead</h1>
+        <p className="page-subtitle">
+          Onboard a prospective client and assign them to an active sales agent
         </p>
       </div>
 
       {/* Form Card */}
-      <div className='row'>
-        <div className='col-12'>
-          <div className='card shadow-sm full-width-card'>
-            <div className='card-body'>
+      <div className="row justify-content-center">
+        <div className="col-12 col-xl-9">
+          <div className="card shadow-sm">
+            <div className="card-body p-3 p-md-4">
               <form onSubmit={submit}>
                 {/* Lead Name */}
-                <div className='mb-3'>
-                  <label className='form-label'>Lead Name</label>
-                  <input
-                    required
-                    name='name'
-                    className='form-control'
-                    placeholder='Enter lead name'
-                    value={form.name}
-                    onChange={handle}
-                  />
+                <div className="mb-4">
+                  <label htmlFor="lead-name" className="form-label">
+                    Client / Company Name *
+                  </label>
+                  <div className="input-group">
+                    <span className="input-group-text bg-dark border-secondary text-muted">
+                      <FiUser size={15} />
+                    </span>
+                    <input
+                      id="lead-name"
+                      required
+                      name="name"
+                      className="form-control"
+                      placeholder="e.g. Acme Innovations Corp"
+                      value={form.name}
+                      onChange={handle}
+                    />
+                  </div>
                 </div>
 
-                {/* Row 1 */}
-                <div className='row'>
-                  <div className='col-md-4 mb-3'>
-                    <label className='form-label'>Source</label>
-                    <select
-                      name='source'
-                      className='form-select'
-                      value={form.source}
-                      onChange={handle}>
-                      <option>Website</option>
-                      <option>Referral</option>
-                      <option>Cold Call</option>
-                      <option>Advertisement</option>
-                      <option>Email</option>
-                      <option>Other</option>
-                    </select>
+                <div className="row g-3 mb-3">
+                  {/* Source */}
+                  <div className="col-12 col-md-4">
+                    <label htmlFor="lead-source" className="form-label">
+                      Acquisition Channel *
+                    </label>
+                    <div className="input-group">
+                      <span className="input-group-text bg-dark border-secondary text-muted">
+                        <FiBriefcase size={15} />
+                      </span>
+                      <select
+                        id="lead-source"
+                        name="source"
+                        className="form-select"
+                        value={form.source}
+                        onChange={handle}
+                      >
+                        <option>Website</option>
+                        <option>Referral</option>
+                        <option>Cold Call</option>
+                        <option>Advertisement</option>
+                        <option>Email</option>
+                        <option>Other</option>
+                      </select>
+                    </div>
                   </div>
 
-                  <div className='col-md-4 mb-3'>
-                    <label className='form-label'>Sales Agent</label>
+                  {/* Sales Agent */}
+                  <div className="col-12 col-md-4">
+                    <label htmlFor="lead-agent" className="form-label">
+                      Assigned Agent *
+                    </label>
                     <select
-                      name='salesAgent'
-                      className='form-select'
+                      id="lead-agent"
+                      name="salesAgent"
+                      className="form-select"
                       value={form.salesAgent}
                       onChange={handle}
-                      required>
-                      <option value=''>-- Select Agent --</option>
+                      required
+                    >
+                      <option value="">-- Choose Agent --</option>
                       {agents.map((a) => (
                         <option key={a._id} value={a._id}>
                           {a.name}
@@ -115,41 +170,38 @@ const AddLeads = () => {
                     </select>
                   </div>
 
-                  <div className='col-md-2 mb-3'>
-                    <label className='form-label'>Priority</label>
+                  {/* Priority */}
+                  <div className="col-12 col-md-4">
+                    <label htmlFor="lead-priority" className="form-label">
+                      Deal Priority
+                    </label>
                     <select
-                      name='priority'
-                      className='form-select'
+                      id="lead-priority"
+                      name="priority"
+                      className="form-select"
                       value={form.priority}
-                      onChange={handle}>
+                      onChange={handle}
+                    >
                       <option>High</option>
                       <option>Medium</option>
                       <option>Low</option>
                     </select>
                   </div>
-
-                  <div className='col-md-2 mb-3'>
-                    <label className='form-label'>Time to Close (days)</label>
-                    <input
-                      type='number'
-                      min='1'
-                      name='timeToClose'
-                      className='form-control'
-                      value={form.timeToClose}
-                      onChange={handle}
-                    />
-                  </div>
                 </div>
 
-                {/* Row 2 – Lead Status */}
-                <div className='row'>
-                  <div className='col-md-4 mb-3'>
-                    <label className='form-label'>Lead Status</label>
+                <div className="row g-3 mb-4">
+                  {/* Status */}
+                  <div className="col-12 col-md-6">
+                    <label htmlFor="lead-status" className="form-label">
+                      Initial Status Stage
+                    </label>
                     <select
-                      name='status'
-                      className='form-select'
+                      id="lead-status"
+                      name="status"
+                      className="form-select"
                       value={form.status}
-                      onChange={handle}>
+                      onChange={handle}
+                    >
                       <option>New</option>
                       <option>Contacted</option>
                       <option>Qualified</option>
@@ -157,45 +209,92 @@ const AddLeads = () => {
                       <option>Closed</option>
                     </select>
                   </div>
+
+                  {/* Time to Close */}
+                  <div className="col-12 col-md-6">
+                    <label htmlFor="lead-time" className="form-label">
+                      Estimated Days to Close *
+                    </label>
+                    <div className="input-group">
+                      <span className="input-group-text bg-dark border-secondary text-muted">
+                        <FiClock size={15} />
+                      </span>
+                      <input
+                        id="lead-time"
+                        type="number"
+                        min="1"
+                        name="timeToClose"
+                        className="form-control"
+                        placeholder="30"
+                        value={form.timeToClose}
+                        onChange={handle}
+                        required
+                      />
+                    </div>
+                  </div>
                 </div>
 
                 {/* Tags */}
-                <div className='mb-4'>
-                  <label className='form-label'>Tags</label>
+                <div className="mb-4 p-3 rounded" style={{ backgroundColor: "var(--bg-elevated)", border: "1px solid var(--border-subtle)" }}>
+                  <label htmlFor="tag-input" className="form-label mb-2 d-flex align-items-center gap-1">
+                    <FiTag size={14} className="text-primary" />
+                    <span>Lead Classification Tags</span>
+                  </label>
 
-                  <div className='input-group mb-2'>
+                  <div className="input-group mb-2">
                     <input
-                      className='form-control'
-                      placeholder='Type tag and click Add'
+                      id="tag-input"
+                      className="form-control"
+                      placeholder="Type a tag name and hit Enter or Add"
                       value={tagInput}
                       onChange={(e) => setTagInput(e.target.value)}
+                      onKeyDown={handleTagKeyDown}
                     />
                     <button
-                      type='button'
-                      className='btn btn-outline-primary'
-                      onClick={addTag}>
-                      Add
+                      type="button"
+                      className="btn btn-outline-primary"
+                      onClick={addTag}
+                    >
+                      <FiPlus size={15} />
+                      <span>Add Tag</span>
                     </button>
                   </div>
 
-                  <div className='d-flex flex-wrap gap-2'>
-                    {form.tags.map((tag) => (
-                      <span key={tag} className='badge bg-secondary'>
-                        {tag}
-                        <button
-                          type='button'
-                          className='btn btn-sm btn-link text-white ms-1 p-0'
-                          onClick={() => removeTag(tag)}>
-                          ❌
-                        </button>
-                      </span>
-                    ))}
+                  <div className="d-flex flex-wrap gap-2 pt-1">
+                    {form.tags.length === 0 ? (
+                      <span className="text-muted small">No tags attached yet.</span>
+                    ) : (
+                      form.tags.map((tag) => (
+                        <span key={tag} className="tag-badge" style={{ padding: "0.25rem 0.6rem" }}>
+                          <span>{tag}</span>
+                          <button
+                            type="button"
+                            className="btn-icon-subtle p-0 ms-1 text-muted"
+                            onClick={() => removeTag(tag)}
+                            aria-label={`Remove tag ${tag}`}
+                            style={{ lineHeight: 1 }}
+                          >
+                            <FiX size={13} />
+                          </button>
+                        </span>
+                      ))
+                    )}
                   </div>
                 </div>
 
-                {/* Submit */}
-                <div className='d-flex justify-content-end'>
-                  <button className='btn btn-primary px-4'>Create Lead</button>
+                {/* Actions */}
+                <div className="d-flex justify-content-end gap-2 pt-2 border-top border-secondary border-opacity-10">
+                  <Link to="/leads" className="btn btn-outline-secondary">
+                    Cancel
+                  </Link>
+                  <button
+                    type="submit"
+                    className="btn btn-primary px-4"
+                    disabled={submitting}
+                  >
+                    <FiCheckCircle size={16} />
+                    <span>{submitting ? "Creating Lead..." : "Create & Assign Lead"}</span>
+                  </button>
                 </div>
               </form>
             </div>

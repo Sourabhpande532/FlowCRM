@@ -35,9 +35,10 @@ app.post("/", async (req, res) => {
     res.status(201).json({ success: true, data: { leads } });
   } catch (error) {
     console.error("Internal server error /lead", error);
-    res.status({
+    res.status(500).json({
       success: false,
       message: "Internal server error create lead.",
+      error: error.message,
     });
   }
 });

@@ -64,14 +64,14 @@ app.get("/closed-by-agent", async (req, res) => {
       { $group: { _id: "$salesAgent", count: { $sum: 1 } } },
     ]);
 
-    const results = [];
-    for (const item of closed) {
-      const agent = await SalesAgent.findById(item._id).select("name");
-      results.push({
-        agent: agent ? agent.name : null,
-        closedCount: item.count,
-      });
-    }
+    const agentIds = closed.map((item) => item._id).filter(Boolean);
+    const agents = await SalesAgent.find({ _id: { $in: agentIds } }).select("name");
+    const agentMap = new Map(agents.map((a) => [a._id.toString(), a.name]));
+
+    const results = closed.map((item) => ({
+      agent: item._id ? agentMap.get(item._id.toString()) || null : null,
+      closedCount: item.count,
+    }));
     res.json(results);
   } catch (error) {
     console.error(error);
